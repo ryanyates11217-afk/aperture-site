@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aperture — Explain Anything, In Focus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #eef0ea;
+    --panel: #e3e6dd;
+    --ink: #1c2b28;
+    --ink-soft: #55655f;
+    --ochre: #b9832f;
+    --ochre-soft: #b9832f33;
+    --rust: #a05a42;
+    --hairline: #1c2b2820;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    padding: 56px 20px 80px;
+  }
+
+  .wrap { max-width: 620px; margin: 0 auto; }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--rust);
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(2.6rem, 7vw, 3.6rem);
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    line-height: 1;
+  }
+
+  .tagline {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 500;
+    color: var(--ink-soft);
+    font-size: 1.1rem;
+    margin: 0 0 44px;
+  }
+
+  /* FOCUS DIAL */
+  .dial-card {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 20px;
+    padding: 30px 28px 24px;
+    margin-bottom: 24px;
+  }
+
+  .dial-top {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    margin-bottom: 22px;
+  }
+
+  /* the depth-of-field indicator: two circles that sharpen/blur as level changes */
+  .dof-indicator {
+    position: relative;
+    width: 54px;
+    height: 54px;
+    flex-shrink: 0;
+  }
+  .dof-indicator .ring {
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    transition: filter 0.4s ease, opacity 0.4s ease;
+  }
+  .dof-indicator .core {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 14px; height: 14px;
+    background: var(--ochre);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: filter 0.4s ease, width 0.4s ease, height 0.4s ease;
+  }
+
+  .dial-heading {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.15rem;
+  }
+  .dial-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+
+  .track-wrap {
+    position: relative;
+    padding: 0 4px;
+  }
+
+  .track {
+    position: relative;
+    height: 4px;
+    background: var(--ink);
+    opacity: 0.15;
+    border-radius: 2px;
+    margin: 30px 0 14px;
+  }
+
+  .tick {
+    position: absolute;
+    top: -22px;
+    transform: translateX(-50%);
+    width: 30px;
+    text-align: center;
+    cursor: pointer;
+  }
+  .tick .fnum {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    transition: color 0.2s;
+  }
+  .tick.active .fnum {
+    color: var(--ochre);
+    font-weight: 500;
+  }
+  .tick-mark {
+    position: absolute;
+    bottom: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 10px;
+    background: var(--ink);
+    opacity: 0.25;
+  }
+  .tick.active .tick-mark { opacity: 0; }
+
+  .handle {
+    position: absolute;
+    top: 50%;
+    width: 20px;
+    height: 20px;
+    background: var(--ochre);
+    border: 3px solid var(--paper);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    transition: left 0.35s cubic-bezier(.34,1.4,.64,1);
+    cursor: pointer;
+  }
+
+  .level-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 16px;
+  }
+
+  .current-level {
+    text-align: center;
+    margin-top: 4px;
+  }
+  .current-level .name {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+  .current-level .desc {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+
+  /* CONSOLE */
+  .console {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 20px;
+    padding: 24px;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 1rem;
+    padding: 14px 16px;
+    resize: none;
+    height: 64px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--ochre); }
+  textarea::placeholder { color: #8a978f; }
+
+  .go-btn {
+    margin-top: 12px;
+    width: 100%;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 12px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 14px;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.1s;
+  }
+  .go-btn:hover { filter: brightness(1.3); }
+  .go-btn:active { transform: scale(0.99); }
+  .go-btn:disabled {
+    background: #a3ada4;
+    color: #eef0ea;
+    cursor: not-allowed;
+  }
+  .go-btn:focus-visible, textarea:focus-visible, .handle:focus-visible {
+    outline: 2px solid var(--rust);
+    outline-offset: 2px;
+  }
+
+  .result {
+    margin-top: 22px;
+    border-top: 1px dashed var(--hairline);
+    padding-top: 18px;
+    min-height: 20px;
+  }
+
+  .result-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+  }
+  .result-meta .who { color: var(--ochre); }
+
+  .result-body {
+    font-family: 'Fraunces', serif;
+    font-size: 1.12rem;
+    line-height: 1.65;
+    white-space: pre-wrap;
+  }
+
+  .cursor-blink {
+    display: inline-block;
+    width: 8px;
+    background: var(--rust);
+    animation: blink 0.8s step-end infinite;
+    margin-left: 1px;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .loading-dots {
+    display: flex;
+    gap: 5px;
+    margin: 4px 0 2px;
+  }
+  .loading-dots span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--ochre);
+    opacity: 0.4;
+    animation: dot 1s ease-in-out infinite;
+  }
+  .loading-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes dot {
+    0%, 100% { opacity: 0.25; transform: scale(0.85); }
+    50% { opacity: 1; transform: scale(1); }
+  }
+
+  .footnote {
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: #8a978f;
+    letter-spacing: 0.06em;
+    margin-top: 26px;
+    text-transform: uppercase;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .handle, .dof-indicator .ring, .dof-indicator .core { transition: none; }
+    .cursor-blink, .loading-dots span { animation: none; }
+  }
+
+  @media (max-width: 460px) {
+    .dial-top { gap: 14px; }
+    .tick { width: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Adjustable explanation</div>
+  <h1>APERTURE</h1>
+  <p class="tagline">One idea. As wide or as sharp as you need it.</p>
+
+  <div class="dial-card">
+    <div class="dial-top">
+      <div class="dof-indicator">
+        <div class="ring" id="dofRing"></div>
+        <div class="core" id="dofCore"></div>
+      </div>
+      <div>
+        <div class="dial-heading">Focus depth</div>
+        <div class="dial-sub" id="fReadout">Level 3 of 6 — Motivated Learner</div>
+      </div>
+    </div>
+
+    <div class="track-wrap">
+      <div class="track" id="track">
+        <div class="handle" id="handle" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="5" aria-valuenow="2" aria-label="Focus depth"></div>
+      </div>
+    </div>
+
+    <div class="current-level">
+      <div class="name" id="levelName">Motivated Learner</div>
+      <div class="desc" id="levelDesc">Some jargon is fine, as long as it's defined along the way.</div>
+    </div>
+  </div>
+
+  <div class="console">
+    <textarea id="topicInput" placeholder="Type anything: black holes, inflation, mitochondria, why the sky is blue..."></textarea>
+    <button class="go-btn" id="goBtn">Bring into focus</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <div class="footnote">Powered by Claude · pick a depth, ask anything</div>
+</div>
+
+<script>
+const levels = [
+  {
+    step: '1',
+    name: 'Complete Beginner',
+    desc: 'Assume no background at all. Use everyday analogies and simple words.',
+    persona: 'someone with zero background in this subject. Use everyday analogies, avoid jargon entirely, and keep it warm and simple, like explaining to a smart friend outside the field.',
+    blur: 6, coreSize: 26
+  },
+  {
+    step: '2',
+    name: 'Curious Newcomer',
+    desc: 'Some context is welcome, but nothing technical yet.',
+    persona: 'a curious newcomer who has heard the term before but never studied it. Give useful context and a couple of relatable comparisons, but keep it jargon-free.',
+    blur: 4, coreSize: 22
+  },
+  {
+    step: '3',
+    name: 'Motivated Learner',
+    desc: "Some jargon is fine, as long as it's defined along the way.",
+    persona: 'a motivated learner who is willing to engage with real terminology as long as each term is briefly defined the first time it appears.',
+    blur: 2.5, coreSize: 19
+  },
+  {
+    step: '4',
+    name: 'Working Practitioner',
+    desc: 'Assumes foundational knowledge of the general field.',
+    persona: 'a working practitioner in an adjacent field who already understands the basics and wants the real mechanics, not the simplified version.',
+    blur: 1.2, coreSize: 16
+  },
+  {
+    step: '5',
+    name: 'Specialist',
+    desc: 'Comfortable with technical language and nuance.',
+    persona: 'a specialist in this exact area. Use precise technical language freely, focus on nuance, edge cases, and what most simplified explanations get wrong.',
+    blur: 0.4, coreSize: 14
+  },
+  {
+    step: '6',
+    name: 'Expert',
+    desc: 'Full technical depth. No hand-holding, no simplification.',
+    persona: 'a domain expert with deep existing knowledge. Go straight to the technical substance, open questions, and subtleties an expert would actually care about. No hand-holding.',
+    blur: 0, coreSize: 12
+  }
+];
+
+let selectedIndex = 2;
+
+const track = document.getElementById('track');
+const handle = document.getElementById('handle');
+const fReadout = document.getElementById('fReadout');
+const levelName = document.getElementById('levelName');
+const levelDesc = document.getElementById('levelDesc');
+const dofRing = document.getElementById('dofRing');
+const dofCore = document.getElementById('dofCore');
+
+function buildTicks() {
+  levels.forEach((lvl, i) => {
+    const tick = document.createElement('div');
+    tick.className = 'tick';
+    const pct = (i / (levels.length - 1)) * 100;
+    tick.style.left = pct + '%';
+    tick.innerHTML = `<span class="fnum">${lvl.step}</span><span class="tick-mark"></span>`;
+    tick.addEventListener('click', () => selectLevel(i));
+    track.appendChild(tick);
+  });
+}
+
+function selectLevel(i) {
+  selectedIndex = i;
+  const pct = (i / (levels.length - 1)) * 100;
+  handle.style.left = pct + '%';
+  handle.setAttribute('aria-valuenow', i);
+
+  document.querySelectorAll('.tick').forEach((t, idx) => {
+    t.classList.toggle('active', idx === i);
+  });
+
+  const lvl = levels[i];
+  fReadout.textContent = `Level ${lvl.step} of 6 — ${lvl.name}`;
+  levelName.textContent = lvl.name;
+  levelDesc.textContent = lvl.desc;
+  dofRing.style.filter = `blur(${lvl.blur}px)`;
+  dofRing.style.opacity = 1 - lvl.blur / 10;
+  dofCore.style.width = lvl.coreSize + 'px';
+  dofCore.style.height = lvl.coreSize + 'px';
+  dofCore.style.filter = `blur(${lvl.blur * 0.4}px)`;
+}
+
+buildTicks();
+selectLevel(selectedIndex);
+
+// track this page visit (fire and forget, failures are silent)
+fetch('/api/track', { method: 'POST' }).catch(() => {});
+
+// keyboard support for the handle
+handle.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' && selectedIndex < levels.length - 1) selectLevel(selectedIndex + 1);
+  if (e.key === 'ArrowLeft' && selectedIndex > 0) selectLevel(selectedIndex - 1);
+});
+
+// drag support
+let dragging = false;
+handle.addEventListener('pointerdown', () => dragging = true);
+window.addEventListener('pointerup', () => dragging = false);
+window.addEventListener('pointermove', (e) => {
+  if (!dragging) return;
+  const rect = track.getBoundingClientRect();
+  let pct = (e.clientX - rect.left) / rect.width;
+  pct = Math.max(0, Math.min(1, pct));
+  const idx = Math.round(pct * (levels.length - 1));
+  if (idx !== selectedIndex) selectLevel(idx);
+});
+
+// --- Generation logic ---
+const topicInput = document.getElementById('topicInput');
+const goBtn = document.getElementById('goBtn');
+const result = document.getElementById('result');
+
+async function generate() {
+  const topic = topicInput.value.trim();
+  if (!topic) {
+    topicInput.focus();
+    topicInput.style.borderColor = 'var(--rust)';
+    setTimeout(() => topicInput.style.borderColor = '', 900);
+    return;
+  }
+
+  const lvl = levels[selectedIndex];
+  goBtn.disabled = true;
+  goBtn.textContent = 'Focusing...';
+
+  result.innerHTML = `
+    <div class="result-meta"><span class="who">${lvl.name}</span> — explaining "${escapeHtml(topic)}"</div>
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+  `;
+
+  try {
+    const response = await fetch('/api/explain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic, persona: lvl.persona })
+    });
+
+    const data = await response.json();
+    const explanation = data.explanation || "Couldn't bring that into focus. Try again.";
+
+    renderResult(lvl, topic, explanation);
+  } catch (err) {
+    renderResult(lvl, topic, "Something went wrong bringing that into focus. Try again in a moment.");
+  } finally {
+    goBtn.disabled = false;
+    goBtn.textContent = 'Bring into focus';
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderResult(lvl, topic, text) {
+  result.innerHTML = `
+    <div class="result-meta"><span class="who">${lvl.name}</span> — explaining "${escapeHtml(topic)}"</div>
+    <div class="result-body" id="resultBody"></div>
+  `;
+  const body = document.getElementById('resultBody');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (reduceMotion) {
+    body.textContent = text;
+    return;
+  }
+
+  let i = 0;
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor-blink';
+  cursor.textContent = '|';
+
+  function typeNext() {
+    if (i <= text.length) {
+      body.textContent = text.slice(0, i);
+      body.appendChild(cursor);
+      i += Math.max(1, Math.floor(Math.random() * 3));
+      requestAnimationFrame(() => setTimeout(typeNext, 12));
+    } else {
+      cursor.remove();
+    }
+  }
+  typeNext();
+}
+
+goBtn.addEventListener('click', generate);
+topicInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) generate();
+});
+</script>
+</body>
+</html>
