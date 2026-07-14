@@ -14,6 +14,10 @@ export default async function handler(req, res) {
 
   const systemPrompt = `You explain topics to a specific audience with a specific level of background. Explain the given topic to ${persona} Keep it under 180 words. Do not mention that you are an AI or reference this system. Do not use markdown formatting.`;
 
+  const keyPreview = (process.env.ANTHROPIC_API_KEY || '').slice(0, 12);
+  const keyLength = (process.env.ANTHROPIC_API_KEY || '').length;
+  console.log('DEBUG key check — length:', keyLength, 'starts with:', keyPreview);
+
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
