@@ -3,7 +3,9 @@
 // The key must match the ADMIN_KEY environment variable you set in Vercel,
 // so random visitors can't see or reset your count.
 
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
+
+const redis = Redis.fromEnv();
 
 export default async function handler(req, res) {
   const providedKey = req.query.key;
@@ -13,7 +15,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const count = (await kv.get('visit_count')) || 0;
+    const count = (await redis.get('visit_count')) || 0;
     return res.status(200).json({ visits: count });
   } catch (err) {
     console.error(err);
