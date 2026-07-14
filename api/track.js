@@ -2,7 +2,9 @@
 // Uses Vercel KV (a small Redis-backed store) so the count persists
 // across requests, since serverless functions don't keep memory between calls.
 
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
+
+const redis = Redis.fromEnv();
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -10,12 +12,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const count = await kv.incr('visit_count');
+    const count = await redis.incr('visit_count');
     return res.status(200).json({ ok: true, visits: count });
   } catch (err) {
     console.error(err);
-    // Fail silently from the visitor's perspective — a missed count
-    // shouldn't ever break the site itself.
     return res.status(200).json({ ok: false });
   }
 }
